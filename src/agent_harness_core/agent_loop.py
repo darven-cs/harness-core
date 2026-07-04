@@ -1,5 +1,5 @@
 from agent_harness_core.llm import _build_llm
-from agent_harness_core.tools import TOOLS,run_bash
+from agent_harness_core.tools import TOOLS,TOOL_HANDLERS
 from agent_harness_core.llm import MODEL
 from agent_harness_core.prompt import SYSTEM
 
@@ -19,15 +19,10 @@ def agent_loop(messages: list):
         results = []
         for block in response.content:
             if block.type == "tool_use":
-                # 输出调用
-                print(f"\033[33m$ {block.input['command']}\033[0m")
-                # 输出调用结果
-                output = run_bash(block.input["command"])
-                print(output[:200])
-                results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": output,
-                })
-        # Feed tool results back, loop continues
+                print(f"\033[33m> {block.name}\033[0m")
+                handler = TOOL_HANDLERS.get(block.name)
+                output = handler(**block.input) if handler else f"Unknown: {block.name}"
+                print(str(output)[:200])
+                results.append({"type": "tool_result", "tool_use_id": block.id, "content": output})
+
         messages.append({"role": "user", "content": results})
